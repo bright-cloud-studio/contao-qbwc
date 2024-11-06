@@ -20,7 +20,8 @@
     },
     "require":{
         "php": "^7.4 || ^8.0",
-        "contao/core-bundle": "4.13 - 5.3"
+        "contao/core-bundle": "4.13 - 5.3",
+        "consolibyte/quickbooks": "v3.6"
     },
     "extra":{
         "contao-manager-plugin": "Bcs\\QBWCBundle\\ContaoManager\\Plugin"
