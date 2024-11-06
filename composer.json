@@ -1,0 +1,42 @@
+{
+    "name":"bright-cloud-studio/contao-qbwc",
+    "description":"Integrates Quickbooks with Contao and Isotope.",
+    "keywords": ["contao", "isotope", "quickbooks", "qbwc", "inventory", "bright", "cloud", "studio"],
+    "type": "contao-bundle",
+    "homepage": "http://brightcloudstudio.com/",
+    "license": "LGPL-3.0+",
+    "version": "0.0.56",
+    "authors":[
+        {
+            "name": "Bright Cloud Studio",
+            "homepage": "https://brightcloudstudio.com",
+            "email": "mark@brightcloudstudio.com",
+            "role": "Developer"
+        }
+    ],
+    "support":{
+        "issues": "https://github.com/bright-cloud-studio/contao-qbwc/issues",
+        "source": "https://github.com/bright-cloud-studio/contao-qbwc"
+    },
+    "require":{
+        "php": "^7.4 || ^8.0",
+        "contao/core-bundle": "4.13 - 5.3"
+    },
+    "extra":{
+        "contao-manager-plugin": "Bcs\\QBWCBundle\\ContaoManager\\Plugin"
+    },
+    "autoload": {
+        "psr-4": {
+            "Bcs\\QBWCBundle\\": "src"
+        },
+        "classmap": [
+            "src/Resources/contao"
+        ],
+        "exclude-from-classmap": [
+            "src/Resources/contao/config/",
+            "src/Resources/contao/dca/",
+            "src/Resources/contao/languages/",
+            "src/Resources/contao/templates/"
+        ]
+    }
+}
