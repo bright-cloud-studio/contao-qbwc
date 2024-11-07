@@ -32,6 +32,13 @@ $hooks = array(
 	QuickBooks_WebConnector_Handlers::HOOK_LOGINSUCCESS => '_quickbooks_hook_loginsuccess',
 );
 
+/* HOOK - Successful Login
+function _quickbooks_hook_loginsuccess($requestID, $user, $hook, &$err, $hook_data, $callback_config)
+{
+	// Do something whenever a successful login occurs...
+}
+*/
+
 $soapserver = QUICKBOOKS_SOAPSERVER_BUILTIN;
 
 $soap_options = array();
