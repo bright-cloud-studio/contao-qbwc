@@ -28,7 +28,8 @@ $errmap = array(
 
 // An array of callback hooks
 $hooks = array(
-	QuickBooks_WebConnector_Handlers::HOOK_LOGINSUCCESS => '_quickbooks_hook_loginsuccess', 	// call this whenever a successful login occurs
+    // call this whenever a successful login occurs
+	QuickBooks_WebConnector_Handlers::HOOK_LOGINSUCCESS => '_quickbooks_hook_loginsuccess',
 );
 
 $soapserver = QUICKBOOKS_SOAPSERVER_BUILTIN;
@@ -238,6 +239,113 @@ class QuickbooksBackend extends Backend
     	return $xml;
     }
 
+    public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
+    
+    	//$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
+    	if( VERBOSE_LOGGING_MODE) $fp = fopen(dirname(__FILE__).'/new-log.log', 'a+');
+    	if( VERBOSE_LOGGING_MODE) fwrite($fp, $xml);
+    	//fwrite($fp, print_r($idents,true));
+    	if (!empty($idents['iteratorRemainingCount']))
+    	{
+    		// Queue up another request
+    		
+    		$Queue = QuickBooks_WebConnector_Queue_Singleton::getInstance();
+    		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM, array( 'iteratorID' => $idents['iteratorID'] ));
+    	}
+    	
+    	// Import all of the records
+    	$errnum = 0;
+    	$errmsg = '';
+    	$Parser = new QuickBooks_XML_Parser($xml);
+    	if ($Doc = $Parser->parse($errnum, $errmsg))
+    	{
+    		$Root = $Doc->getRoot();
+    		$List = $Root->getChildAt('QBXML/QBXMLMsgsRs/ItemQueryRs');
+    		fwrite( $fp, "Doc Parsed, about to import inventory (".count($List->children()).")\n" );
+    
+    		foreach ($List->children() as $Item)
+    		{
+    			$type = substr(substr($Item->name(), 0, -3), 4);
+    			$ret = $Item->name();
+    			
+    			$arr = array(
+    				'Name' => $Item->getChildDataAt($ret . ' Name'),
+    				'QuantityOnHand' => $Item->getChildDataAt($ret . ' QuantityOnHand'), 
+    			);
+    
+    			$upd_s = 'UPDATE product SET inventory = \''.mysql_real_escape_string($arr['QuantityOnHand']).'\' WHERE productedp = \''.mysql_real_escape_string($arr['Name']).'\'';
+    			$upd_q = mysql_query($upd_s);
+    			if( VERBOSE_LOGGING_MODE)
+                    fwrite( $fp, $upd_s."\n" );
+    		}
+    	}
+
+    	if(VERBOSE_LOGGING_MODE)
+            fclose($fp);    
+    	return true;
+    	
+    }
+
+
+
+
+
+
+    // Build a request to import customers already in QuickBooks into our application
+    public function _quickbooks_item_import_request($requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $version, $locale) {
+    	
+        // Iterator support (break the result set into small chunks)
+    	$attr_iteratorID = '';
+    	$attr_iterator = ' iterator="Start" ';
+    	if (empty($extra['iteratorID']))
+    	{
+    		// This is the first request in a new batch
+    		$last = _quickbooks_get_last_run($user, $action);
+    		_quickbooks_set_last_run($user, $action);			// Update the last run time to NOW()
+    		
+    		// Set the current run to $last
+    		_quickbooks_set_current_run($user, $action, $last);
+    	}
+    	else
+    	{
+    		// This is a continuation of a batch
+    		$attr_iteratorID = ' iteratorID="' . $extra['iteratorID'] . '" ';
+    		$attr_iterator = ' iterator="Continue" ';
+    		
+    		$last = _quickbooks_get_current_run($user, $action);
+    	}
+    	
+    	// Build the request
+    	$xml = '<?xml version="1.0" encoding="utf-8"?>
+    		<?qbxml version="' . $version . '"?>
+    		<QBXML>
+    			<QBXMLMsgsRq onError="stopOnError">
+    				<ItemQueryRq ' . $attr_iterator . ' ' . $attr_iteratorID . ' requestID="' . $requestID . '">
+    					<MaxReturned>' . QB_QUICKBOOKS_MAX_RETURNED . '</MaxReturned>
+    				</ItemQueryRq>	
+    			</QBXMLMsgsRq>
+    		</QBXML>';
+    
+    	if( VERBOSE_LOGGING_MODE ) {
+    		$fp = fopen(dirname(__FILE__).'/quickbooks-nw-inventory.log', 'a+');
+    		fwrite($fp, 'Extra: '.var_export($extra, true));
+    		$xmlObj = XMLReader::xml($xml);
+    
+    		// You must to use it
+    		$xmlObj->setParserProperty(XMLReader::VALIDATE, true);
+    		$XMLstatus = $xmlObj->isValid() ? 'Valid XML' : 'Invalid XML';
+    		fwrite($fp, 'XMLStatus: '.$XMLstatus . "\n");
+    		fwrite($fp, $xml);
+    		fclose($fp);
+    	}
+    		
+    	return $xml;
+    }
+
+
+
+    
+
 
 
 
@@ -246,6 +354,10 @@ class QuickbooksBackend extends Backend
 
 
     
+
+    
+
+
     public function functionName() {
         
     }
