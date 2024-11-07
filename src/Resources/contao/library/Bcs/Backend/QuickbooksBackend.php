@@ -398,16 +398,7 @@ class QuickbooksBackend extends Backend
     }
 
 
-
-
-
-
-    /**
-     * Get the last date/time the QuickBooks sync ran
-     * 
-     * @param string $user		The web connector username 
-     * @return string			A date/time in this format: "yyyy-mm-dd hh:ii:ss"
-     */
+    // Get the last date/time the QuickBooks sync ran
     public function _quickbooks_get_last_run($user, $action)
     {
     	$type = null;
@@ -416,15 +407,44 @@ class QuickbooksBackend extends Backend
     }
 
 
-
-
-
-
-
-
-
-    public function functionName() {
-        
+    // Set the last date/time the QuickBooks sync ran to NOW
+    public function _quickbooks_set_last_run($user, $action, $force = null)
+    {
+    	$value = date('Y-m-d') . 'T' . date('H:i:s');
+    	
+    	if ($force)
+    	{
+    		$value = date('Y-m-d', strtotime($force)) . 'T' . date('H:i:s', strtotime($force));
+    	}
+    	
+    	return QuickBooks_Utilities::configWrite(QB_QUICKBOOKS_DSN, $user, md5(__FILE__), QB_QUICKBOOKS_CONFIG_LAST . '-' . $action, $value);
     }
+
+
+    // Set the current run time
+    public function _quickbooks_set_current_run($user, $action, $force = null)
+    {
+    	$value = date('Y-m-d') . 'T' . date('H:i:s');
+    	
+    	if ($force)
+    	{
+    		$value = date('Y-m-d', strtotime($force)) . 'T' . date('H:i:s', strtotime($force));
+    	}
+    	
+    	return QuickBooks_Utilities::configWrite(QB_QUICKBOOKS_DSN, $user, md5(__FILE__), QB_QUICKBOOKS_CONFIG_CURR . '-' . $action, $value);	
+    }
+    
+
+    // Get the current run time
+    public function _quickbooks_get_current_run($user, $action)
+    {
+    	$type = null;
+    	$opts = null;
+    	return QuickBooks_Utilities::configRead(QB_QUICKBOOKS_DSN, $user, md5(__FILE__), QB_QUICKBOOKS_CONFIG_CURR . '-' . $action, $type, $opts);	
+    }
+
+
+    // public function functionName() { 
+    // }
     
 }
