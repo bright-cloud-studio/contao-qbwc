@@ -1,5 +1,63 @@
 <?php
 
+
+// Require the Quickbooks Framework
+require_once 'QuickBooks.php';
+
+// A username and password you'll use in: 
+//	a) Your .QWC file
+//	b) The Web Connector
+//	c) The QuickBooks framework
+// 	NOTE: This has *no relationship* with QuickBooks usernames, Windows usernames, etc. 
+// 	It is *only* used for the Web Connector and SOAP server! 
+$user = 'microcut';
+$pass = 'cFsyppHd068zlkqm';
+
+// Map QuickBooks actions to handler functions
+$map = array(
+	QUICKBOOKS_QUERY_INVENTORYITEM => array( '_quickbooks_inventory_request', '_quickbooks_inventory_response' ),
+	//QUICKBOOKS_IMPORT_ITEM => array( '_quickbooks_item_import_request', '_quickbooks_item_import_response' ),
+);
+
+// This is entirely optional, use it to trigger actions when an error is returned by QuickBooks
+$errmap = array(
+	500 => '_quickbooks_error_e500_notfound', 			// Catch errors caused by searching for things not present in QuickBooks
+	1 => '_quickbooks_error_e500_notfound', 
+	'*' => '_quickbooks_error_catchall', 				// Catch any other errors that might occur
+);
+
+// An array of callback hooks
+$hooks = array(
+	QuickBooks_WebConnector_Handlers::HOOK_LOGINSUCCESS => '_quickbooks_hook_loginsuccess', 	// call this whenever a successful login occurs
+);
+
+$soapserver = QUICKBOOKS_SOAPSERVER_BUILTIN;
+
+$soap_options = array();
+
+$handler_options = array(
+	'deny_concurrent_logins' => false, 
+	'deny_reallyfast_logins' => false, 
+);
+
+$driver_options = array();
+
+$callback_options = array();
+
+if ( !QuickBooks_Utilities::initialized($dsn))
+{
+	// Initialize creates the neccessary database schema for queueing up requests and logging
+	QuickBooks_Utilities::initialize($dsn);
+	
+	// This creates a username and password which is used by the Web Connector to authenticate
+	QuickBooks_Utilities::createUser($dsn, $user, $pass);
+
+}
+
+// Initialize the queue
+QuickBooks_WebConnector_Queue_Singleton::initialize($dsn);
+
+
 namespace Bcs\Backend;
 
 use Contao\Backend;
@@ -11,10 +69,34 @@ use Contao\StringUtil;
 
 class QuickbooksBackend extends Backend
 {
+
+    
+    
     // Define Variables
     public function defineVariables() {
+        
         // The prefix for the mysql tables
         define('QUICKBOOKS_DRIVER_SQL_MYSQL_PREFIX', 'myqb_');
+        
+        // Configuration parameter for the quickbooks_config table, used to keep track of the last time the QuickBooks sync ran
+        define('QB_QUICKBOOKS_CONFIG_LAST', 'last');
+
+        // Configuration parameter for the quickbooks_config table, used to keep track of the timestamp for the current iterator
+        define('QB_QUICKBOOKS_CONFIG_CURR', 'curr');
+
+        // Maximum number of customers/invoices returned at a time when doing the import
+        define('QB_QUICKBOOKS_MAX_RETURNED', 1000);
+
+        // Related to Purchase Orders
+        define('QB_PRIORITY_PURCHASEORDER', 4);
+
+        // Request priorities, items sync first
+        define('QB_PRIORITY_ITEM', 3);
+
+        // MySQL login details
+        $dsn = 'mysql://root:root@localhost/quickbooks_import';
+        define('QB_QUICKBOOKS_DSN',$dsn);
+        
     }
     
     // Enable error logging
@@ -24,6 +106,13 @@ class QuickbooksBackend extends Backend
         ini_set("log_errors", 1);
         ini_set("error_log", dirname(__FILE__)."/error.log");
         define('VERBOSE_LOGGING_MODE',true);
+
+        // Logging level
+        //$log_level = QUICKBOOKS_LOG_NORMAL;
+        //$log_level = QUICKBOOKS_LOG_VERBOSE;
+        //$log_level = QUICKBOOKS_LOG_DEBUG;				
+        $log_level = QUICKBOOKS_LOG_DEVELOP;		// Use this level until you're sure everything works!!!
+        
 	}
 
     // Set the Time Zone
@@ -33,6 +122,120 @@ class QuickbooksBackend extends Backend
         {
             date_default_timezone_set('America/New_York');
         }
+    }
+
+
+    public function hook_login_success($requestID, $user, $hook, &$err, $hook_data, $callback_config) {
+        // For new users, we need to set up a few things
+
+    	// Fetch the queue instance
+    	$Queue = QuickBooks_WebConnector_Queue_Singleton::getInstance();
+    	$date = '1983-01-02 12:01:01';
+    	
+    	// Set up the invoice imports
+    	if (!_quickbooks_get_last_run($user, QUICKBOOKS_QUERY_INVENTORYITEM))
+    	{
+    		// And write the initial sync time
+    		_quickbooks_set_last_run($user, QUICKBOOKS_QUERY_INVENTORYITEM, $date);
+    	}
+    
+    
+        // ... and for items
+    	/*if (!_quickbooks_get_last_run($user, QUICKBOOKS_IMPORT_ITEM))
+    	{
+    		_quickbooks_set_last_run($user, QUICKBOOKS_IMPORT_ITEM, $date);
+    	}*/
+    
+    
+    	$check_s = 'SELECT COUNT(quickbooks_queue_id) as active_queries FROM myqb_queue WHERE qb_action = \'ItemInventoryQuery\' AND dequeue_datetime IS NULL AND enqueue_datetime > \''.date('Y-m-d H:i:s',strtotime('-24 hours')).'\' ';
+    	$check_q = mysql_query($check_s);
+    	$check_row = mysql_fetch_assoc($check_q);
+    	if( $check_row['active_queries'] == 0 ){
+    		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM);	
+    	}	
+    
+    	/*$check_s = 'SELECT COUNT(quickbooks_queue_id) as active_queries FROM myqb_queue WHERE qb_action = \'ItemImportQuery\' AND dequeue_datetime IS NULL AND enqueue_datetime > \''.date('Y-m-d H:i:s',strtotime('-24 hours')).'\' ';
+    	$check_q = mysql_query($check_s);
+    	$check_row = mysql_fetch_assoc($check_q);
+    	if( $check_row['active_queries'] == 0 ){
+    		$Queue->enqueue(QUICKBOOKS_IMPORT_ITEM, null, QB_PRIORITY_ITEM);	
+    	}	*/
+    }
+
+
+    public function initialize() {
+        // Create a new server and tell it to handle the requests
+        // __construct($dsn_or_conn, $map, $errmap = array(), $hooks = array(), $log_level = QUICKBOOKS_LOG_NORMAL, $soap = QUICKBOOKS_SOAPSERVER_PHP, $wsdl = QUICKBOOKS_WSDL, $soap_options = array(), $handler_options = array(), $driver_options = array(), $callback_options = array()
+        $Server = new QuickBooks_WebConnector_Server($dsn, $map, $errmap, $hooks, $log_level, $soapserver, QUICKBOOKS_WSDL, $soap_options, $handler_options, $driver_options, $callback_options);
+        $response = $Server->handle(true, true);
+
+        // If you wanted, you could do something with $response here for debugging
+        //if( VERBOSE_LOGGING_MODE ){
+        	$fp = fopen(dirname(__FILE__).'/log_quickbooks.log', 'a+');
+        	fwrite($fp, "\n" . '-- ' . date('Y-m-d H:i:s') . ' --' . "\n" );
+        	fwrite($fp, $response);
+        	fclose($fp);
+        //}
+        
+    }
+
+    public function _quickbooks_inventory_request($requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $version, $locale) {
+    	// Iterator support (break the result set into small chunks)
+    	$attr_iteratorID = '';
+    	$attr_iterator = ' iterator="Start" ';
+    	if (empty($extra['iteratorID']))
+    	{
+    		// This is the first request in a new batch
+    		$last = _quickbooks_get_last_run($user, $action);
+    		_quickbooks_set_last_run($user, $action);			// Update the last run time to NOW()
+    		
+    		// Set the current run to $last
+    		_quickbooks_set_current_run($user, $action, $last);
+    	}
+    	else
+    	{
+    		// This is a continuation of a batch
+    		$attr_iteratorID = ' iteratorID="' . $extra['iteratorID'] . '" ';
+    		$attr_iterator = ' iterator="Continue" ';
+    		
+    		$last = _quickbooks_get_current_run($user, $action);
+    	}
+    	
+    	// Build the request
+    	/*$xml = '<?xml version="1.0" encoding="utf-8"?>
+    		<?qbxml version="' . $version . '"?>
+    		<QBXML>
+    			<QBXMLMsgsRq onError="stopOnError">
+    				<ItemQueryRq ' . $attr_iterator . ' ' . $attr_iteratorID . ' requestID="' . $requestID . '">
+    					<MaxReturned>1000</MaxReturned>
+    				</ItemQueryRq>	
+    			</QBXMLMsgsRq>
+    		</QBXML>';*/
+    	$xml = '<?xml version="1.0" encoding="utf-8"?>
+    		<?qbxml version="' . $version . '"?>
+    		<QBXML>
+    			<QBXMLMsgsRq onError="stopOnError">
+    				<ItemQueryRq ' . $attr_iterator . ' ' . $attr_iteratorID . ' requestID="' . $requestID . '">
+    					<MaxReturned>1000</MaxReturned>
+    					<IncludeRetElement>Name</IncludeRetElement>
+    					<IncludeRetElement>QuantityOnHand</IncludeRetElement>
+    				</ItemQueryRq>	
+    			</QBXMLMsgsRq>
+    		</QBXML>';
+    	if( VERBOSE_LOGGING_MODE ) {
+    		$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
+    		fwrite($fp, 'Extra: '.var_export($extra, true));
+    		$xmlObj = XMLReader::xml($xml);
+    
+    		// You must to use it
+    		$xmlObj->setParserProperty(XMLReader::VALIDATE, true);
+    		$XMLstatus = $xmlObj->isValid() ? 'Valid XML' : 'Invalid XML';
+    		fwrite($fp, 'XMLStatus: '.$XMLstatus . "\n");
+    		fwrite($fp, $xml);
+    		fclose($fp);
+    	}
+    
+    	return $xml;
     }
 
 
