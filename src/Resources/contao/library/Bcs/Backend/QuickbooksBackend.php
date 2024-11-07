@@ -39,16 +39,26 @@ function _quickbooks_hook_loginsuccess($requestID, $user, $hook, &$err, $hook_da
 }
 */
 
+// A pure-PHP SOAP server (no PHP ext/soap extension required, also makes debugging easier)
 $soapserver = QUICKBOOKS_SOAPSERVER_BUILTIN;
 
+// See http://www.php.net/soap
 $soap_options = array();
 
+// See the comments in the QuickBooks/Server/Handlers.php file
 $handler_options = array(
+    //'authenticate' => ' *** YOU DO NOT NEED TO PROVIDE THIS CONFIGURATION VARIABLE TO USE THE DEFAULT AUTHENTICATION METHOD FOR THE DRIVER YOU'RE USING (I.E.: MYSQL) *** '
+	//'authenticate' => 'your_function_name_here', 
+	//'authenticate' => array( 'YourClassName', 'YourStaticMethod' ),
 	'deny_concurrent_logins' => false, 
 	'deny_reallyfast_logins' => false, 
-);
+);		
 
-$driver_options = array();
+// See the comments in the QuickBooks/Driver/<YOUR DRIVER HERE>.php file ( i.e. 'Mysql.php', etc. )
+$driver_options = array(
+    //'max_log_history' => 1024,	// Limit the number of quickbooks_log entries to 1024
+    //'max_queue_history' => 64, 	// Limit the number of *successfully processed* quickbooks_queue entries to 64
+);
 
 $callback_options = array();
 
