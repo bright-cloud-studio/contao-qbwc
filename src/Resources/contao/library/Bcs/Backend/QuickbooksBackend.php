@@ -344,6 +344,26 @@ class QuickbooksBackend extends Backend
 
 
 
+    /**
+     * Handle a 500 not found error from QuickBooks
+     * Instead of returning empty result sets for queries that don't find any 
+     * records, QuickBooks returns an error message. This handles those error 
+     * messages, and acts on them by adding the missing item to QuickBooks. 
+     */
+    public function _quickbooks_error_e500_notfound($requestID, $user, $action, $ID, $extra, &$err, $xml, $errnum, $errmsg)
+    {
+    	$Queue = QuickBooks_WebConnector_Queue_Singleton::getInstance();
+    	
+    	if ($action == QUICKBOOKS_QUERY_INVENTORYITEM)
+    	{
+    		return true;
+    	}
+    	
+    	return true;
+    }
+
+
+
     
 
 
