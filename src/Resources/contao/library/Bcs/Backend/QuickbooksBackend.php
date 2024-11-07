@@ -364,6 +364,43 @@ class QuickbooksBackend extends Backend
 
 
 
+
+
+
+    /**
+     * Catch any errors that occur
+     * @param string $requestID			
+     * @param string $action
+     * @param mixed $ID
+     * @param mixed $extra
+     * @param string $err
+     * @param string $xml
+     * @param mixed $errnum
+     * @param string $errmsg
+     * @return void
+     */
+    public function _quickbooks_error_catchall($requestID, $user, $action, $ID, $extra, &$err, $xml, $errnum, $errmsg)
+    {
+    	$message = '';
+    	$message .= 'Request ID: ' . $requestID . "\r\n";
+    	$message .= 'User: ' . $user . "\r\n";
+    	$message .= 'Action: ' . $action . "\r\n";
+    	$message .= 'ID: ' . $ID . "\r\n";
+    	$message .= 'Extra: ' . print_r($extra, true) . "\r\n";
+    	//$message .= 'Error: ' . $err . "\r\n";
+    	$message .= 'Error number: ' . $errnum . "\r\n";
+    	$message .= 'Error message: ' . $errmsg . "\r\n";
+    	if( VERBOSE_LOGGING_MODE ){
+    		$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
+    		fwrite($fp, $message);
+    		fclose($fp);
+    	}
+    }
+
+
+
+
+
     
 
 
