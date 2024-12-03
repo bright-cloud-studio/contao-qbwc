@@ -9,4 +9,4 @@
 */
 
 /* Front End modules */
-$GLOBALS['FE_MOD']['gai']['mod_list_services'] = 'Bcs\Module\ModReceiveData';
+$GLOBALS['FE_MOD']['gai']['mod_receive_data'] = 'Bcs\Module\ModReceiveData';
