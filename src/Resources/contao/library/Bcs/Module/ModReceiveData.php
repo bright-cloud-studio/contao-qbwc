@@ -17,7 +17,7 @@ class ModReceiveData extends \Contao\Module
     // Main function called when the page this is on loads
     protected function compile()
 	{
-        echo "Module: compile()';
+        echo "HIT";
         die();   
 	}
 }
