@@ -14,21 +14,10 @@ namespace Bcs\Module;
 
 class ModReceiveData extends \Contao\Module
 {
-
-
     // Main function called when the page this is on loads
     protected function compile()
 	{
-		if (!isset($_GET['keywords']) && Input::post('FORM_SUBMIT') == 'tl_search')
-		{
-			//$_GET['keywords'] = Input::post('keywords');
-		}
-
         echo "Module: compile()';
-        die();
-        
+        die();   
 	}
-
-
-    
 }
