@@ -29,7 +29,19 @@ class ModReceiveData extends \Contao\Module
 	    
         $user = Config::get('qbwc_username');
         $pass = Config::get('qbwc_password');
-
+        
+        error_reporting(2147483647);
+        ini_set('display_errors', 0);
+        ini_set("log_errors", 1);
+        ini_set("error_log", dirname(__FILE__)."/error.log");
+        
+        if (function_exists('date_default_timezone_set'))
+        {
+        	date_default_timezone_set('America/New_York');
+        }
+        
+        define('VERBOSE_LOGGING_MODE',true);
+        
         // The prefix for the mysql tables
         define('QUICKBOOKS_DRIVER_SQL_MYSQL_PREFIX', 'quickbooks_');
         
@@ -52,12 +64,11 @@ class ModReceiveData extends \Contao\Module
         //$dsn = 'mysql://root:root@localhost/quickbooks_import';
         $dsn = "mysqli://microcutusa_user:Xn%J5IY78Z!h~J8gYZ@localhost/microcutusa_contao_413";
         define('QB_QUICKBOOKS_DSN',$dsn);
-        
 
         
         // Map QuickBooks actions to handler functions
         $map = array(
-            QUICKBOOKS_QUERY_INVENTORYITEM => array( [[$this,'_quickbooks_inventory_request']], [[$this,'_quickbooks_inventory_response']] ),
+            QUICKBOOKS_QUERY_INVENTORYITEM => array( [$this,'_quickbooks_inventory_request'], [$this,'_quickbooks_inventory_response'] ),
             //QUICKBOOKS_IMPORT_ITEM => array( '_quickbooks_item_import_request', '_quickbooks_item_import_response' ),
         );
 
@@ -76,6 +87,7 @@ class ModReceiveData extends \Contao\Module
             \QuickBooks_WebConnector_Handlers::HOOK_LOGINSUCCESS => [[$this,'_hook_login_success']],
         );
 
+        $log_level = QUICKBOOKS_LOG_DEVELOP;
 
         $soapserver = QUICKBOOKS_SOAPSERVER_BUILTIN;
 
@@ -110,73 +122,25 @@ class ModReceiveData extends \Contao\Module
         $Server = new \QuickBooks_WebConnector_Server($dsn, $map, $errmap, $hooks, $log_level, $soapserver, QUICKBOOKS_WSDL, $soap_options, $handler_options, $driver_options, $callback_options);
         $response = $Server->handle(true, true);
 
-        // If you wanted, you could do something with $response here for debugging
-        //if( VERBOSE_LOGGING_MODE ){
-        	$fp = fopen(dirname(__FILE__).'/log_quickbooks.log', 'a+');
-        	fwrite($fp, "\n" . '-- ' . date('Y-m-d H:i:s') . ' --' . "\n" );
-        	fwrite($fp, $response);
-        	fclose($fp);
-        //}
-        
-        
-        
-        //die();
-        
-        
 	}
-	
-	
-	
-	// Enable error logging
-    public function enableErrorLogging() { 
-        error_reporting(2147483647);
-        ini_set('display_errors', 0);
-        ini_set("log_errors", 1);
-        ini_set("error_log", dirname(__FILE__)."/error.log");
-        define('VERBOSE_LOGGING_MODE',true);
 
-        // Logging level
-        //$log_level = QUICKBOOKS_LOG_NORMAL;
-        //$log_level = QUICKBOOKS_LOG_VERBOSE;
-        //$log_level = QUICKBOOKS_LOG_DEBUG;				
-        $log_level = QUICKBOOKS_LOG_DEVELOP;		// Use this level until you're sure everything works!!!
-        
-	}
-	
-	// Set the Time Zone
-    public function setTimeZone() {
-        // If the function to set the timezone exists, set it to EST
-        if (function_exists('date_default_timezone_set'))
-        {
-            date_default_timezone_set('America/New_York');
-        }
-    }
     
     public function _hook_login_success($requestID, $user, $hook, &$err, $hook_data, $callback_config) {
         
-        $fp = fopen(dirname(__FILE__).'/login_qb.log', 'a+');
-        	fwrite($fp, "\n" . '-- ' . date('Y-m-d H:i:s') . ' --' . "\n" );
-        	fwrite($fp, $response);
-        	fclose($fp);
-        // For new users, we need to set up a few things
-
+        $fp = fopen(dirname(__FILE__).'/login_success.log', 'a+');
+    	fwrite($fp, "asdf");
+    	fclose($fp);
+        
     	// Fetch the queue instance
     	$Queue = \QuickBooks_WebConnector_Queue_Singleton::getInstance();
     	$date = '1983-01-02 12:01:01';
     	
     	// Set up the invoice imports
-    	if (!$this->quickbooks_get_last_run($user, QUICKBOOKS_QUERY_INVENTORYITEM))
+    	if (!$this->_quickbooks_get_last_run($user, QUICKBOOKS_QUERY_INVENTORYITEM))
     	{
     		// And write the initial sync time
-    		$this->quickbooks_set_last_run($user, QUICKBOOKS_QUERY_INVENTORYITEM, $date);
+    		$this->_quickbooks_set_last_run($user, QUICKBOOKS_QUERY_INVENTORYITEM, $date);
     	}
-    
-    
-        // ... and for items
-    	/*if (!_quickbooks_get_last_run($user, QUICKBOOKS_IMPORT_ITEM))
-    	{
-    		_quickbooks_set_last_run($user, QUICKBOOKS_IMPORT_ITEM, $date);
-    	}*/
     
     
         $objPage = Database::getInstance()
@@ -184,30 +148,32 @@ class ModReceiveData extends \Contao\Module
 				->execute();
 
     	if( $objPage->active_queries == 0  ){
+    	    $fp = fopen(dirname(__FILE__).'/inventory_item_trigger.log', 'a+');
+        	fwrite($fp, "asdf");
+        	fclose($fp);
     		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM);	
     	}	
-    
-    	/*$check_s = 'SELECT COUNT(quickbooks_queue_id) as active_queries FROM myqb_queue WHERE qb_action = \'ItemImportQuery\' AND dequeue_datetime IS NULL AND enqueue_datetime > \''.date('Y-m-d H:i:s',strtotime('-24 hours')).'\' ';
-    	$check_q = mysql_query($check_s);
-    	$check_row = mysql_fetch_assoc($check_q);
-    	if( $check_row['active_queries'] == 0 ){
-    		$Queue->enqueue(QUICKBOOKS_IMPORT_ITEM, null, QB_PRIORITY_ITEM);	
-    	}	*/
+
     }
 
     
     public function _quickbooks_inventory_request($requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $version, $locale) {
+    	
+    	$fp = fopen(dirname(__FILE__).'/inventory_request.log', 'a+');
+    	fwrite($fp, "asdf");
+    	fclose($fp);
+    	
     	// Iterator support (break the result set into small chunks)
     	$attr_iteratorID = '';
     	$attr_iterator = ' iterator="Start" ';
     	if (empty($extra['iteratorID']))
     	{
     		// This is the first request in a new batch
-    		$last = _quickbooks_get_last_run($user, $action);
-    		_quickbooks_set_last_run($user, $action);			// Update the last run time to NOW()
+    		$last = $this->_quickbooks_get_last_run($user, $action);
+    		$this->_quickbooks_set_last_run($user, $action);			// Update the last run time to NOW()
     		
     		// Set the current run to $last
-    		_quickbooks_set_current_run($user, $action, $last);
+    		$this->_quickbooks_set_current_run($user, $action, $last);
     	}
     	else
     	{
@@ -215,19 +181,9 @@ class ModReceiveData extends \Contao\Module
     		$attr_iteratorID = ' iteratorID="' . $extra['iteratorID'] . '" ';
     		$attr_iterator = ' iterator="Continue" ';
     		
-    		$last = _quickbooks_get_current_run($user, $action);
+    		$last = $this->_quickbooks_get_current_run($user, $action);
     	}
-    	
-    	// Build the request
-    	/*$xml = '<?xml version="1.0" encoding="utf-8"?>
-    		<?qbxml version="' . $version . '"?>
-    		<QBXML>
-    			<QBXMLMsgsRq onError="stopOnError">
-    				<ItemQueryRq ' . $attr_iterator . ' ' . $attr_iteratorID . ' requestID="' . $requestID . '">
-    					<MaxReturned>1000</MaxReturned>
-    				</ItemQueryRq>	
-    			</QBXMLMsgsRq>
-    		</QBXML>';*/
+
     	$xml = '<?xml version="1.0" encoding="utf-8"?>
     		<?qbxml version="' . $version . '"?>
     		<QBXML>
@@ -239,48 +195,36 @@ class ModReceiveData extends \Contao\Module
     				</ItemQueryRq>	
     			</QBXMLMsgsRq>
     		</QBXML>';
-    	//if( VERBOSE_LOGGING_MODE ) {
-    		$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
-    		fwrite($fp, 'Extra: '.var_export($extra, true));
-    		$xmlObj = XMLReader::xml($xml);
-    
-    		// You must to use it
-    		$xmlObj->setParserProperty(XMLReader::VALIDATE, true);
-    		$XMLstatus = $xmlObj->isValid() ? 'Valid XML' : 'Invalid XML';
-    		fwrite($fp, 'XMLStatus: '.$XMLstatus . "\n");
-    		fwrite($fp, $xml);
-    		fclose($fp);
-    	//}
     
     	return $xml;
     }
     
     public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
     
-    	$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
-    	if( VERBOSE_LOGGING_MODE) $fp = fopen(dirname(__FILE__).'/new-log.log', 'a+');
-    	if( VERBOSE_LOGGING_MODE) fwrite($fp, $xml);
-    	fwrite($fp, print_r($idents,true));
+    	$fp = fopen(dirname(__FILE__).'/inventory_response.log', 'a+');
+    	
     	if (!empty($idents['iteratorRemainingCount']))
     	{
+
     		// Queue up another request
     		
-    		$Queue = QuickBooks_WebConnector_Queue_Singleton::getInstance();
+    		$Queue = \QuickBooks_WebConnector_Queue_Singleton::getInstance();
     		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM, array( 'iteratorID' => $idents['iteratorID'] ));
     	}
     	
     	// Import all of the records
     	$errnum = 0;
     	$errmsg = '';
-    	$Parser = new QuickBooks_XML_Parser($xml);
+    	$Parser = new \QuickBooks_XML_Parser($xml);
     	if ($Doc = $Parser->parse($errnum, $errmsg))
     	{
+
     		$Root = $Doc->getRoot();
     		$List = $Root->getChildAt('QBXML/QBXMLMsgsRs/ItemQueryRs');
-    		fwrite( $fp, "Doc Parsed, about to import inventory (".count($List->children()).")\n" );
     
     		foreach ($List->children() as $Item)
     		{
+
     			$type = substr(substr($Item->name(), 0, -3), 4);
     			$ret = $Item->name();
     			
@@ -288,16 +232,15 @@ class ModReceiveData extends \Contao\Module
     				'Name' => $Item->getChildDataAt($ret . ' Name'),
     				'QuantityOnHand' => $Item->getChildDataAt($ret . ' QuantityOnHand'), 
     			);
-    
-    			//$upd_s = 'UPDATE product SET inventory = \''.mysql_real_escape_string($arr['QuantityOnHand']).'\' WHERE productedp = \''.mysql_real_escape_string($arr['Name']).'\'';
-    			//$upd_q = mysql_query($upd_s);
-    			//if( VERBOSE_LOGGING_MODE)
-                fwrite( $fp, $upd_s."\n" );
+    			
+    			fwrite($fp, "Prod: " . $arr['Name'] . " - " . "Quantity: " . $arr['QuantityOnHand'] . "\r\n");
+  
+
     		}
     	}
 
-    	if(VERBOSE_LOGGING_MODE)
-            fclose($fp);    
+        fclose($fp);
+        
     	return true;
     	
     }
@@ -311,11 +254,11 @@ class ModReceiveData extends \Contao\Module
     	if (empty($extra['iteratorID']))
     	{
     		// This is the first request in a new batch
-    		$last = _quickbooks_get_last_run($user, $action);
-    		_quickbooks_set_last_run($user, $action);			// Update the last run time to NOW()
+    		$last = $this->_quickbooks_get_last_run($user, $action);
+    		$this->_quickbooks_set_last_run($user, $action);			// Update the last run time to NOW()
     		
     		// Set the current run to $last
-    		_quickbooks_set_current_run($user, $action, $last);
+    		$this->_quickbooks_set_current_run($user, $action, $last);
     	}
     	else
     	{
@@ -323,7 +266,7 @@ class ModReceiveData extends \Contao\Module
     		$attr_iteratorID = ' iteratorID="' . $extra['iteratorID'] . '" ';
     		$attr_iterator = ' iterator="Continue" ';
     		
-    		$last = _quickbooks_get_current_run($user, $action);
+    		$last = $this->_quickbooks_get_current_run($user, $action);
     	}
     	
     	// Build the request
@@ -402,7 +345,7 @@ class ModReceiveData extends \Contao\Module
     }
     
     // Get the last date/time the QuickBooks sync ran
-    public function quickbooks_get_last_run($user, $action)
+    public function _quickbooks_get_last_run($user, $action)
     {
         $fp = fopen(dirname(__FILE__).'/quickbooks-get_last_run.log', 'a+');
 		fwrite($fp, "asdf");
@@ -414,7 +357,7 @@ class ModReceiveData extends \Contao\Module
     }
     
     // Set the last date/time the QuickBooks sync ran to NOW
-    public function quickbooks_set_last_run($user, $action, $force = null)
+    public function _quickbooks_set_last_run($user, $action, $force = null)
     {
         $fp = fopen(dirname(__FILE__).'/quickbooks-set_last_run.log', 'a+');
 		fwrite($fp, "asdf");
