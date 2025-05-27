@@ -252,6 +252,10 @@ class ModReceiveData extends \Contao\Module
     			
     		}
     	}
+    	
+    	// Update the 'last_run' time
+    	Config::set('last_run', time());
+    	
         fclose($fp);
     	return true;
     }
