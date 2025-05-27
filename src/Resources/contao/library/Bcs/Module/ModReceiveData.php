@@ -15,6 +15,9 @@ namespace Bcs\Module;
 use Contao\Config;
 use Contao\Database;
 
+use Isotope\Isotope;
+use Isotope\Model\Product;
+
 class ModReceiveData extends \Contao\Module
 {
     
@@ -127,9 +130,9 @@ class ModReceiveData extends \Contao\Module
     
     public function _hook_login_success($requestID, $user, $hook, &$err, $hook_data, $callback_config) {
         
-        $fp = fopen(dirname(__FILE__).'/login_success.log', 'a+');
-    	fwrite($fp, "asdf");
-    	fclose($fp);
+        //$fp = fopen(dirname(__FILE__).'/login_success.log', 'a+');
+    	//fwrite($fp, "asdf");
+    	//fclose($fp);
         
     	// Fetch the queue instance
     	$Queue = \QuickBooks_WebConnector_Queue_Singleton::getInstance();
@@ -148,9 +151,9 @@ class ModReceiveData extends \Contao\Module
 				->execute();
 
     	if( $objPage->active_queries == 0  ){
-    	    $fp = fopen(dirname(__FILE__).'/inventory_item_trigger.log', 'a+');
-        	fwrite($fp, "asdf");
-        	fclose($fp);
+    	    //$fp = fopen(dirname(__FILE__).'/inventory_item_trigger.log', 'a+');
+        	//fwrite($fp, "asdf");
+        	//fclose($fp);
     		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM);	
     	}	
 
@@ -159,9 +162,9 @@ class ModReceiveData extends \Contao\Module
     
     public function _quickbooks_inventory_request($requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $version, $locale) {
     	
-    	$fp = fopen(dirname(__FILE__).'/inventory_request.log', 'a+');
-    	fwrite($fp, "asdf");
-    	fclose($fp);
+    	//$fp = fopen(dirname(__FILE__).'/inventory_request.log', 'a+');
+    	//fwrite($fp, "asdf");
+    	//fclose($fp);
     	
     	// Iterator support (break the result set into small chunks)
     	$attr_iteratorID = '';
@@ -232,8 +235,18 @@ class ModReceiveData extends \Contao\Module
     				'Name' => $Item->getChildDataAt($ret . ' Name'),
     				'QuantityOnHand' => $Item->getChildDataAt($ret . ' QuantityOnHand'), 
     			);
+    		
     			
-    			fwrite($fp, "Prod: " . $arr['Name'] . " - " . "Quantity: " . $arr['QuantityOnHand'] . "\r\n");
+    			// Get Isotope product based SKU, update inventory and save
+    			$product = Product::findOneBy(['tl_iso_product.sku=?'],[$arr['Name']]);
+    			if($product != null) {
+        			fwrite($fp, "Product: " . $arr['Name'] . " - " . $product->inventory . " - " . $arr['QuantityOnHand'] . "\r\n");
+        			fwrite($fp, print_r($arr, true));
+        			
+        			$product->inventory = $arr['QuantityOnHand'];
+        			$product->save();
+    			}
+    			
   
 
     		}
@@ -281,16 +294,16 @@ class ModReceiveData extends \Contao\Module
     		</QBXML>';
     
     	if( VERBOSE_LOGGING_MODE ) {
-    		$fp = fopen(dirname(__FILE__).'/quickbooks-nw-inventory.log', 'a+');
-    		fwrite($fp, 'Extra: '.var_export($extra, true));
-    		$xmlObj = XMLReader::xml($xml);
+    		//$fp = fopen(dirname(__FILE__).'/quickbooks-nw-inventory.log', 'a+');
+    		//fwrite($fp, 'Extra: '.var_export($extra, true));
+    		//$xmlObj = XMLReader::xml($xml);
     
     		// You must to use it
-    		$xmlObj->setParserProperty(XMLReader::VALIDATE, true);
-    		$XMLstatus = $xmlObj->isValid() ? 'Valid XML' : 'Invalid XML';
-    		fwrite($fp, 'XMLStatus: '.$XMLstatus . "\n");
-    		fwrite($fp, $xml);
-    		fclose($fp);
+    		//$xmlObj->setParserProperty(XMLReader::VALIDATE, true);
+    		//$XMLstatus = $xmlObj->isValid() ? 'Valid XML' : 'Invalid XML';
+    		//fwrite($fp, 'XMLStatus: '.$XMLstatus . "\n");
+    		//fwrite($fp, $xml);
+    		//fclose($fp);
     	}
     		
     	return $xml;
@@ -338,18 +351,18 @@ class ModReceiveData extends \Contao\Module
     	$message .= 'Error number: ' . $errnum . "\r\n";
     	$message .= 'Error message: ' . $errmsg . "\r\n";
     	//if( VERBOSE_LOGGING_MODE ){
-    		$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
-    		fwrite($fp, $message);
-    		fclose($fp);
+    		//$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
+    		//fwrite($fp, $message);
+    		//fclose($fp);
     	//}
     }
     
     // Get the last date/time the QuickBooks sync ran
     public function _quickbooks_get_last_run($user, $action)
     {
-        $fp = fopen(dirname(__FILE__).'/quickbooks-get_last_run.log', 'a+');
-		fwrite($fp, "asdf");
-		fclose($fp);
+        //$fp = fopen(dirname(__FILE__).'/quickbooks-get_last_run.log', 'a+');
+		//fwrite($fp, "asdf");
+		//fclose($fp);
 		
     	$type = null;
     	$opts = null;
@@ -359,9 +372,9 @@ class ModReceiveData extends \Contao\Module
     // Set the last date/time the QuickBooks sync ran to NOW
     public function _quickbooks_set_last_run($user, $action, $force = null)
     {
-        $fp = fopen(dirname(__FILE__).'/quickbooks-set_last_run.log', 'a+');
-		fwrite($fp, "asdf");
-		fclose($fp);
+        //$fp = fopen(dirname(__FILE__).'/quickbooks-set_last_run.log', 'a+');
+		//fwrite($fp, "asdf");
+		//fclose($fp);
         
     	$value = date('Y-m-d') . 'T' . date('H:i:s');
     	
