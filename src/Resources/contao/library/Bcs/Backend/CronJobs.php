@@ -2,10 +2,7 @@
 
 namespace Bcs\Backend;
 
-use Google;
 use Contao\System;
-use Contao\MemberModel;
-
 
 class CronJobs extends System
 {
@@ -15,8 +12,7 @@ class CronJobs extends System
     {
         $log = fopen($_SERVER['DOCUMENT_ROOT'] . '/../'.date('m_d_y').'_cron_log.txt', "a+") or die("Unable to open file!");
         fwrite($log, 'Cron Triggered! '. time() .'\n');
-        fclose($log);
-        
+        fclose($log);   
     }
 
 
