@@ -204,13 +204,12 @@ class ModReceiveData extends \Contao\Module
     
     public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
     
-    	$fp = fopen(dirname(__FILE__).'/inventory_response.log', 'a+');
+        // Create one new file each day, append each update
+    	$fp = fopen(dirname(__FILE__).'/inventory_response_'.date('m_d_Y').'.log', 'a+');
     	
     	if (!empty($idents['iteratorRemainingCount']))
     	{
-
     		// Queue up another request
-    		
     		$Queue = \QuickBooks_WebConnector_Queue_Singleton::getInstance();
     		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM, array( 'iteratorID' => $idents['iteratorID'] ));
     	}
@@ -240,22 +239,21 @@ class ModReceiveData extends \Contao\Module
     			// Get Isotope product based SKU, update inventory and save
     			$product = Product::findOneBy(['tl_iso_product.sku=?'],[$arr['Name']]);
     			if($product != null) {
-        			fwrite($fp, "Product: " . $arr['Name'] . " - " . $product->inventory . " - " . $arr['QuantityOnHand'] . "\r\n");
-        			fwrite($fp, print_r($arr, true));
-        			
-        			$product->inventory = $arr['QuantityOnHand'];
-        			$product->save();
+    			    
+    			    // If there is a change
+    			    if($product->inventory != $arr['QuantityOnHand']) {
+            			fwrite($fp, "SKU: " . $arr['Name'] . " - OLD: " . $product->inventory . " - NEW: " . $arr['QuantityOnHand'] . "\r\n");
+            			$product->inventory = $arr['QuantityOnHand'];
+            			$product->save();
+    			    } else {
+    			        fwrite($fp, "No Change Detected \r\n");
+    			    }
     			}
     			
-  
-
     		}
     	}
-
         fclose($fp);
-        
     	return true;
-    	
     }
     
     // Build a request to import customers already in QuickBooks into our application
