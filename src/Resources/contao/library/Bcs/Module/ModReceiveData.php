@@ -14,6 +14,7 @@ namespace Bcs\Module;
 
 use Contao\Config;
 use Contao\Database;
+use Contao\ModuleModel;
 
 use Isotope\Isotope;
 use Isotope\Model\Product;
@@ -22,6 +23,16 @@ class ModReceiveData extends \Contao\Module
 {
     
     public $Queue;
+    
+    public function __construct($objModule) {
+        
+        // If this module is being constructed we can infer our page is being accessed, as it only shows up on a hidden page
+        
+        // Get the module, update the 'last_run' time, save
+        $mod = ModuleModel::findOneBy('id', $objModule->id);
+        $mod->last_run = time();
+        $mod->save();
+    }
     
     // This function is called on page load. This is our hook into Quickbooks Web Connector, as that will point to the page this module is on
     protected function compile()
