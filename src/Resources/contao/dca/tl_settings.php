@@ -18,7 +18,7 @@ $GLOBALS['TL_DCA']['tl_settings']['fields'] += [
     'last_run' => [
         'label'             => &$GLOBALS['TL_LANG']['tl_settings']['last_run'],
         'inputType'         => 'text',
-        'eval'              => array('mandatory'=>false, 'tl_class'=>'w50')
+        'eval'              => array('rgxp'=>'datim', 'datepicker'=>true, 'mandatory'=>false, 'tl_class'=>'w50')
     ],
     'minute_notification_threshold' => [
         'label'             => &$GLOBALS['TL_LANG']['tl_settings']['minute_notification_threshold'],
