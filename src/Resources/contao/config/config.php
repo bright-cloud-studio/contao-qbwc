@@ -10,3 +10,7 @@
 
 /* Front End modules */
 $GLOBALS['FE_MOD']['gai']['mod_receive_data'] = 'Bcs\Module\ModReceiveData';
+
+
+/* Cron Jobs */
+$GLOBALS['TL_CRON']['minutely'][] = ['Bcs\Backend\CronJobs', 'checkQuickbooksConnection'];
