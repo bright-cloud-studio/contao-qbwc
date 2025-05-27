@@ -8,21 +8,21 @@ $GLOBALS['TL_DCA']['tl_settings']['fields'] += [
     'qbwc_username' => [
         'label'             => &$GLOBALS['TL_LANG']['tl_settings']['qbwc_username'],
         'inputType'         => 'text',
-        'eval'              => ['mandatory' => 'false', 'tl_class' => 'w50'],
+        'eval'              => array('mandatory'=>true, 'tl_class'=>'w50')
     ],
     'qbwc_password' => [
         'label'             => &$GLOBALS['TL_LANG']['tl_settings']['qbwc_password'],
         'inputType'         => 'text',
-        'eval'              => ['mandatory' => 'false', 'tl_class' => 'w50'],
+        'eval'              => array('mandatory'=>true, 'tl_class'=>'w50')
     ],
     'last_run' => [
         'label'             => &$GLOBALS['TL_LANG']['tl_settings']['last_run'],
         'inputType'         => 'text',
-        'eval'              => ['mandatory' => 'false', 'tl_class' => 'w50'],
+        'eval'              => array('mandatory'=>false, 'tl_class'=>'w50')
     ],
     'minute_notification_threshold' => [
         'label'             => &$GLOBALS['TL_LANG']['tl_settings']['minute_notification_threshold'],
         'inputType'         => 'text',
-        'eval'              => ['mandatory' => 'false', 'tl_class' => 'w50'],
+        'eval'              => array('mandatory'=>false, 'tl_class'=>'w50')
     ]
 ];
