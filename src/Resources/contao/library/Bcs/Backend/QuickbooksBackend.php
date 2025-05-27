@@ -247,11 +247,11 @@ class QuickbooksBackend extends Backend
     }
 
     public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
-    
-    	//$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
-    	if( VERBOSE_LOGGING_MODE) $fp = fopen(dirname(__FILE__).'/new-log.log', 'a+');
-    	if( VERBOSE_LOGGING_MODE) fwrite($fp, $xml);
-    	//fwrite($fp, print_r($idents,true));
+        
+    	$fp = fopen(dirname(__FILE__).'/new-log.log', 'a+');
+    	fwrite($fp, $xml);
+    	fwrite($fp, print_r($idents,true));
+        
     	if (!empty($idents['iteratorRemainingCount']))
     	{
     		// Queue up another request
@@ -280,17 +280,14 @@ class QuickbooksBackend extends Backend
     				'QuantityOnHand' => $Item->getChildDataAt($ret . ' QuantityOnHand'), 
     			);
     
-    			$upd_s = 'UPDATE product SET inventory = \''.mysql_real_escape_string($arr['QuantityOnHand']).'\' WHERE productedp = \''.mysql_real_escape_string($arr['Name']).'\'';
-    			$upd_q = mysql_query($upd_s);
-    			if( VERBOSE_LOGGING_MODE)
-                    fwrite( $fp, $upd_s."\n" );
+    			//$upd_s = 'UPDATE product SET inventory = \''.mysql_real_escape_string($arr['QuantityOnHand']).'\' WHERE productedp = \''.mysql_real_escape_string($arr['Name']).'\'';
+    			//$upd_q = mysql_query($upd_s);
+                fwrite( $fp, $upd_s."\n" );
     		}
     	}
 
-    	if(VERBOSE_LOGGING_MODE)
-            fclose($fp);    
+        fclose($fp);    
     	return true;
-    	
     }
 
 
@@ -298,7 +295,7 @@ class QuickbooksBackend extends Backend
 
 
 
-    // Build a request to import customers already in QuickBooks into our application
+    // This is 
     public function _quickbooks_item_import_request($requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $version, $locale) {
     	
         // Iterator support (break the result set into small chunks)
