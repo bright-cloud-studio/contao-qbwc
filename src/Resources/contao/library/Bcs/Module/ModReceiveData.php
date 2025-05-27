@@ -245,16 +245,11 @@ class ModReceiveData extends \Contao\Module
             			fwrite($fp, "SKU: " . $arr['Name'] . " - OLD: " . $product->inventory . " - NEW: " . $arr['QuantityOnHand'] . "\r\n");
             			$product->inventory = $arr['QuantityOnHand'];
             			$product->save();
-    			    } else {
-    			        fwrite($fp, "No Change Detected \r\n");
     			    }
     			}
     			
     		}
     	}
-    	
-    	// Update the 'last_run' time
-    	Config::set('last_run', time());
     	
         fclose($fp);
     	return true;
