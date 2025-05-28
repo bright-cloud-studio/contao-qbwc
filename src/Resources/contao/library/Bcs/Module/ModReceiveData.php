@@ -214,10 +214,7 @@ class ModReceiveData extends \Contao\Module
     }
     
     public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
-    
-        // Create one new file each day, append each update
-    	$fp = fopen(dirname(__FILE__).'/inventory_response_'.date('m_d_Y').'.log', 'a+');
-    	
+
     	if (!empty($idents['iteratorRemainingCount']))
     	{
     		// Queue up another request
@@ -246,23 +243,25 @@ class ModReceiveData extends \Contao\Module
     				'QuantityOnHand' => $Item->getChildDataAt($ret . ' QuantityOnHand'), 
     			);
     		
-    			
     			// Get Isotope product based SKU, update inventory and save
     			$product = Product::findOneBy(['tl_iso_product.sku=?'],[$arr['Name']]);
     			if($product != null) {
     			    
     			    // If there is a change
     			    if($product->inventory != $arr['QuantityOnHand']) {
+            			$fp = fopen(dirname(__FILE__).'/inventory_response_'.date('m_d_Y').'.log', 'a+');
             			fwrite($fp, "SKU: " . $arr['Name'] . " - OLD: " . $product->inventory . " - NEW: " . $arr['QuantityOnHand'] . "\r\n");
+            			
             			$product->inventory = $arr['QuantityOnHand'];
             			$product->save();
+            			
+            			fclose($fp);
     			    }
     			}
     			
     		}
     	}
     	
-        fclose($fp);
     	return true;
     }
     
