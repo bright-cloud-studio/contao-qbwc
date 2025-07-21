@@ -27,3 +27,10 @@ $GLOBALS['TL_DCA']['tl_module']['fields']['minute_notification_threshold'] = arr
   'inputType'               => 'text',
   'eval'                    => array('mandatory'=>false, 'tl_class'=>'w50')
 );
+
+$GLOBALS['TL_DCA']['tl_module']['fields']['last_email'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_module']['last_email'],
+	'inputType'               => 'text',
+	'eval'                    => array('rgxp'=>'datim', 'datepicker'=>true, 'mandatory'=>false, 'tl_class'=>'w50')
+);
