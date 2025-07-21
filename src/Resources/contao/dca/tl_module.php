@@ -1,7 +1,7 @@
 <?php
 
 /** Palettes */
-$GLOBALS['TL_DCA']['tl_module']['palettes']['mod_receive_data']	= '{title_legend},name,type; {receive_data_legend}, last_run, minute_notification_threshold;';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['mod_receive_data']	= '{title_legend},name,type; {receive_data_legend}, last_run, minute_notification_threshold, last_email;';
 
 /** Fields */
 $GLOBALS['TL_DCA']['tl_module']['fields']['bodyNumberOfActive'] = array
