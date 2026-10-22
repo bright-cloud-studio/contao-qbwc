@@ -43,10 +43,10 @@ class ModReceiveData extends \Contao\Module
         $user = Config::get('qbwc_username');
         $pass = Config::get('qbwc_password');
         
-        error_reporting(2147483647);
-        ini_set('display_errors', 0);
-        ini_set("log_errors", 1);
-        ini_set("error_log", dirname(__FILE__)."/error.log");
+        //error_reporting(2147483647);
+        //ini_set('display_errors', 0);
+        //ini_set("log_errors", 1);
+        //ini_set("error_log", dirname(__FILE__)."/error.log");
         
         if (function_exists('date_default_timezone_set'))
         {
