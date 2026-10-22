@@ -10,8 +10,8 @@ require_once 'QuickBooks.php';
 //	c) The QuickBooks framework
 // 	NOTE: This has *no relationship* with QuickBooks usernames, Windows usernames, etc. 
 // 	It is *only* used for the Web Connector and SOAP server! 
-$user = 'microcut';
-$pass = 'cFsyppHd068zlkqm';
+$user = 'microcutqbwc';
+$pass = 'microcutqbwc';
 
 // Map QuickBooks actions to handler functions
 $map = array(
@@ -179,10 +179,10 @@ class QuickbooksBackend extends Backend
 
         // If you wanted, you could do something with $response here for debugging
         //if( VERBOSE_LOGGING_MODE ){
-        	$fp = fopen(dirname(__FILE__).'/log_quickbooks.log', 'a+');
-        	fwrite($fp, "\n" . '-- ' . date('Y-m-d H:i:s') . ' --' . "\n" );
-        	fwrite($fp, $response);
-        	fclose($fp);
+        	//$fp = fopen(dirname(__FILE__).'/log_quickbooks.log', 'a+');
+        	//fwrite($fp, "\n" . '-- ' . date('Y-m-d H:i:s') . ' --' . "\n" );
+        	//fwrite($fp, $response);
+        	//fclose($fp);
         //}
         
     }
@@ -227,9 +227,12 @@ class QuickbooksBackend extends Backend
     					<MaxReturned>1000</MaxReturned>
     					<IncludeRetElement>Name</IncludeRetElement>
     					<IncludeRetElement>QuantityOnHand</IncludeRetElement>
+    					<IncludeRetElement>QuantityAvailable</IncludeRetElement>
     				</ItemQueryRq>	
     			</QBXMLMsgsRq>
     		</QBXML>';
+    		
+    	/*
     	if( VERBOSE_LOGGING_MODE ) {
     		$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
     		fwrite($fp, 'Extra: '.var_export($extra, true));
@@ -242,15 +245,16 @@ class QuickbooksBackend extends Backend
     		fwrite($fp, $xml);
     		fclose($fp);
     	}
+    	*/
     
     	return $xml;
     }
 
     public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
         
-    	$fp = fopen(dirname(__FILE__).'/new-log.log', 'a+');
-    	fwrite($fp, $xml);
-    	fwrite($fp, print_r($idents,true));
+    	//$fp = fopen(dirname(__FILE__).'/new-log.log', 'a+');
+    	//fwrite($fp, $xml);
+    	//fwrite($fp, print_r($idents,true));
         
     	if (!empty($idents['iteratorRemainingCount']))
     	{
@@ -268,7 +272,7 @@ class QuickbooksBackend extends Backend
     	{
     		$Root = $Doc->getRoot();
     		$List = $Root->getChildAt('QBXML/QBXMLMsgsRs/ItemQueryRs');
-    		fwrite( $fp, "Doc Parsed, about to import inventory (".count($List->children()).")\n" );
+    		//fwrite( $fp, "Doc Parsed, about to import inventory (".count($List->children()).")\n" );
     
     		foreach ($List->children() as $Item)
     		{
@@ -282,11 +286,11 @@ class QuickbooksBackend extends Backend
     
     			//$upd_s = 'UPDATE product SET inventory = \''.mysql_real_escape_string($arr['QuantityOnHand']).'\' WHERE productedp = \''.mysql_real_escape_string($arr['Name']).'\'';
     			//$upd_q = mysql_query($upd_s);
-                fwrite( $fp, $upd_s."\n" );
+                //fwrite( $fp, $upd_s."\n" );
     		}
     	}
 
-        fclose($fp);    
+        //fclose($fp);    
     	return true;
     }
 
@@ -330,6 +334,7 @@ class QuickbooksBackend extends Backend
     			</QBXMLMsgsRq>
     		</QBXML>';
     
+        /*
     	if( VERBOSE_LOGGING_MODE ) {
     		$fp = fopen(dirname(__FILE__).'/quickbooks-nw-inventory.log', 'a+');
     		fwrite($fp, 'Extra: '.var_export($extra, true));
@@ -342,6 +347,7 @@ class QuickbooksBackend extends Backend
     		fwrite($fp, $xml);
     		fclose($fp);
     	}
+    	*/
     		
     	return $xml;
     }
@@ -394,11 +400,14 @@ class QuickbooksBackend extends Backend
     	//$message .= 'Error: ' . $err . "\r\n";
     	$message .= 'Error number: ' . $errnum . "\r\n";
     	$message .= 'Error message: ' . $errmsg . "\r\n";
+    	
+    	/*
     	if( VERBOSE_LOGGING_MODE ){
     		$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
     		fwrite($fp, $message);
     		fclose($fp);
     	}
+    	*/
     }
 
 
