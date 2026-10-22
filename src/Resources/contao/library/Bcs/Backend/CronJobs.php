@@ -16,8 +16,8 @@ class CronJobs extends System
         date_default_timezone_set("America/New_York");
         
         // dev log
-        $log = fopen($_SERVER['DOCUMENT_ROOT'] . '/../'.date('m_d_y').'_cron_log.txt', "a+") or die("Unable to open file!");
-        fwrite($log, 'Cron Triggered! '. time() . PHP_EOL);
+        //$log = fopen($_SERVER['DOCUMENT_ROOT'] . '/../'.date('m_d_y').'_cron_log.txt', "a+") or die("Unable to open file!");
+        //fwrite($log, 'Cron Triggered! '. time() . PHP_EOL);
         
         // Get our custom module
         $mod = ModuleModel::findBy(['tl_module.minute_notification_threshold > ?'], [0]);
@@ -30,7 +30,7 @@ class CronJobs extends System
             // If our difference in minutes is greater than our threshold, time to reach out
             if($differenceInMinutes > $mod->minute_notification_threshold) {
                 
-                fwrite($log, 'Sending Notification Email!' . PHP_EOL);
+                //fwrite($log, 'Sending Notification Email!' . PHP_EOL);
 
                 // Always set content-type when sending HTML email
                 $headers = "MIME-Version: 1.0" . "\r\n";
@@ -56,12 +56,12 @@ class CronJobs extends System
                 //mail($addr, $sub, $message, $headers);
 
             } else {
-                fwrite($log, 'Threshold not crossed!' . PHP_EOL);
+                //fwrite($log, 'Threshold not crossed!' . PHP_EOL);
             }
             
         }
 
-        fclose($log);
+        //fclose($log);
         
     }
 
