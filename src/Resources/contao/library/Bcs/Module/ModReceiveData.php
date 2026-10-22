@@ -25,7 +25,6 @@ class ModReceiveData extends \Contao\Module
     public $Queue;
     
     public function __construct($objModule) {
-        
         // If this module is being constructed we can infer our page is being accessed, as it only shows up on a hidden page
         
         // Get the module, update the 'last_run' time, save
@@ -78,7 +77,6 @@ class ModReceiveData extends \Contao\Module
         //$dsn = 'mysql://root:root@localhost/quickbooks_import';
         $dsn = "mysqli://microcutusa_user:Xn%J5IY78Z!h~J8gYZ@localhost/microcutusa_contao_413";
         define('QB_QUICKBOOKS_DSN',$dsn);
-
         
         // Map QuickBooks actions to handler functions
         $map = array(
@@ -86,7 +84,6 @@ class ModReceiveData extends \Contao\Module
             //QUICKBOOKS_IMPORT_ITEM => array( '_quickbooks_item_import_request', '_quickbooks_item_import_response' ),
         );
 
-        
         // This is entirely optional, use it to trigger actions when an error is returned by QuickBooks
         $errmap = array(
             500 => '_quickbooks_error_e500_notfound', 			// Catch errors caused by searching for things not present in QuickBooks
@@ -94,14 +91,14 @@ class ModReceiveData extends \Contao\Module
             '*' => array( $this, 'quickbooks_error_catchall' ), 				// Catch any other errors that might occur
         );
 
-
         // An array of callback hooks
         $hooks = array(
             // call this whenever a successful login occurs
             \QuickBooks_WebConnector_Handlers::HOOK_LOGINSUCCESS => [[$this,'_hook_login_success']],
         );
 
-        $log_level = QUICKBOOKS_LOG_DEVELOP;
+        //$log_level = QUICKBOOKS_LOG_DEVELOP;
+        $log_level = QUICKBOOKS_LOG_NORMAL;
 
         $soapserver = QUICKBOOKS_SOAPSERVER_BUILTIN;
 
@@ -112,7 +109,10 @@ class ModReceiveData extends \Contao\Module
         	'deny_reallyfast_logins' => false, 
         );
         
-        $driver_options = array();
+        //$driver_options = array();
+        $driver_options = array(
+            'max_log_history' => 10000,
+        );
         
         $callback_options = array();
         
@@ -142,7 +142,7 @@ class ModReceiveData extends \Contao\Module
     public function _hook_login_success($requestID, $user, $hook, &$err, $hook_data, $callback_config) {
         
         //$fp = fopen(dirname(__FILE__).'/login_success.log', 'a+');
-    	//fwrite($fp, "asdf");
+    	//fwrite($fp, "Hook - Login Success");
     	//fclose($fp);
         
     	// Fetch the queue instance
@@ -163,7 +163,7 @@ class ModReceiveData extends \Contao\Module
 
     	if( $objPage->active_queries == 0  ){
     	    //$fp = fopen(dirname(__FILE__).'/inventory_item_trigger.log', 'a+');
-        	//fwrite($fp, "asdf");
+        	//fwrite($fp, "Active Queries is 0");
         	//fclose($fp);
     		$Queue->enqueue(QUICKBOOKS_QUERY_INVENTORYITEM, null, QB_PRIORITY_ITEM);	
     	}	
@@ -174,7 +174,7 @@ class ModReceiveData extends \Contao\Module
     public function _quickbooks_inventory_request($requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $version, $locale) {
     	
     	//$fp = fopen(dirname(__FILE__).'/inventory_request.log', 'a+');
-    	//fwrite($fp, "asdf");
+    	//fwrite($fp, "Quickbooks - Inventory Request");
     	//fclose($fp);
     	
     	// Iterator support (break the result set into small chunks)
@@ -206,6 +206,7 @@ class ModReceiveData extends \Contao\Module
     					<MaxReturned>1000</MaxReturned>
     					<IncludeRetElement>Name</IncludeRetElement>
     					<IncludeRetElement>QuantityOnHand</IncludeRetElement>
+    					<IncludeRetElement>QuantityAvailable</IncludeRetElement>
     				</ItemQueryRq>	
     			</QBXMLMsgsRq>
     		</QBXML>';
@@ -213,8 +214,26 @@ class ModReceiveData extends \Contao\Module
     	return $xml;
     }
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     public function _quickbooks_inventory_response( $requestID, $user, $action, $ID, $extra, &$err, $last_action_time, $last_actionident_time, $xml, $idents) {
-
+        
+        //$fp = fopen(dirname(__FILE__).'/inventory_response_'.date('m_d_Y').'.log', 'a+');
+        //fwrite($fp, "Kickoff! \r\n");
+        
     	if (!empty($idents['iteratorRemainingCount']))
     	{
     		// Queue up another request
@@ -249,17 +268,20 @@ class ModReceiveData extends \Contao\Module
     			    
     			    // If there is a change
     			    if($product->inventory != $arr['QuantityOnHand']) {
-            			$fp = fopen(dirname(__FILE__).'/inventory_response_'.date('m_d_Y').'.log', 'a+');
-            			fwrite($fp, "SKU: " . $arr['Name'] . " - OLD: " . $product->inventory . " - NEW: " . $arr['QuantityOnHand'] . "\r\n");
+            			
+            			//fwrite($fp, "CHANGE - SKU: " . $arr['Name'] . " - OLD: " . $product->inventory . " - QOH: " . $arr['QuantityOnHand'] . " - QA: " . $arr['QuantityAvailable'] . "\r\n");
             			
             			$product->inventory = $arr['QuantityOnHand'];
             			$product->save();
+    			    } else {
+    			        //fwrite($fp, "SAME - SKU: " . $arr['Name'] . " - OLD: " . $product->inventory . " - QOH: " . $arr['QuantityOnHand'] . " - QA: " . $arr['QuantityAvailable'] . "\r\n");
             			
-            			fclose($fp);
     			    }
     			}
     			
     		}
+    		
+    		//fclose($fp);
     	}
     	
     	return true;
@@ -357,11 +379,11 @@ class ModReceiveData extends \Contao\Module
     	//$message .= 'Error: ' . $err . "\r\n";
     	$message .= 'Error number: ' . $errnum . "\r\n";
     	$message .= 'Error message: ' . $errmsg . "\r\n";
-    	//if( VERBOSE_LOGGING_MODE ){
+    	if( VERBOSE_LOGGING_MODE ){
     		//$fp = fopen(dirname(__FILE__).'/quickbooks-nw.log', 'a+');
     		//fwrite($fp, $message);
     		//fclose($fp);
-    	//}
+    	}
     }
     
     // Get the last date/time the QuickBooks sync ran
